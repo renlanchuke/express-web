@@ -2,3 +2,4 @@
 .idea/
 node_modules/
 data/rules.json
+npm-debug.log

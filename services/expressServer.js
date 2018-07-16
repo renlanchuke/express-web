@@ -13,13 +13,17 @@ var cookieParser = require('cookie-parser');
 var multer = require('multer'); // handling multipart/form-data, which is primarily used for uploading files
 var errorHandler = require('errorhandler');
 var ConnectRoles = require('connect-roles');
-var logger = require('winston');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 // local require
 var config = require('../config.js')();
 var routes = require('../routes/index.js');
-var api = require('../routes/api.js');
+
+var logger = require('./common').logger
+
+
+//set logger format
+
 
 // fixed mongoose event memory leak: https://github.com/Automattic/mongoose/issues/1992
 mongoose.Promise = global.Promise;
@@ -36,7 +40,11 @@ fs.readdirSync(models_path).forEach(function (file) {
 var apiUseAuthentication = function (req, res, next) {
 
   function unauthorized(res) {
-    return res.sendStatus(401);
+    return res.json({
+      data: {},
+      code: 3,
+      message: "No Authentication"
+    });
   };
 
   if (!req.user) {
@@ -68,26 +76,6 @@ var initApp = function (app, ssl) {
   var User = require('../collections/user');
   passport.use(new LocalStrategy(User.authenticate()));
 
-// passport.use('local', new LocalStrategy(
-//     function (username, password, done) {
-//         var user = {
-            
-//             username: 'admin@gushenxing.com',
-//             name: 'Admin',
-//             password:'admin'
-//         }; // 可以配置通过数据库方式读取登陆账号
-
-//         if (username !== user.username) {
-//             return done(null, false, { message: 'Incorrect username.' });
-//         }
-//         if (password !== user.password) {
-//             return done(null, false, { message: 'Incorrect password.' });
-//         }
-
-//         return done(null, user);
-//     }
-// ));
-
 
   passport.serializeUser(User.serializeUser());
   passport.deserializeUser(User.deserializeUser());
@@ -96,7 +84,7 @@ var initApp = function (app, ssl) {
   app.set('views', path.join(__dirname, '/../views'));
   app.set('view engine', 'ejs');
   app.engine('html', require('ejs').renderFile);
-//app.use(favicon(__dirname + '/public/favicon.ico'));
+  //app.use(favicon(__dirname + '/public/favicon.ico'));
   app.use(methodOverride());
   app.use(session({
     resave: true,
@@ -105,13 +93,15 @@ var initApp = function (app, ssl) {
   }));
   app.use(bodyParser.json());
   app.use(cookieParser());
-  app.use(bodyParser.urlencoded({extended: true}));
+  app.use(bodyParser.urlencoded({ extended: true }));
   app.use(express.static(path.join(__dirname, '/../public')));
   app.use(morgan('combined', {
     skip: function (req, res) {
       return res.statusCode < 400
     }
   }));
+
+
   if (ssl) {
     app.use(passport.initialize());
     app.use(passport.session());
@@ -137,7 +127,7 @@ var initApp = function (app, ssl) {
     user.use(function (req) {
       if (req.user) {
         if (req.user.role === 'admin') {
-          return truseue;
+          return true;
         }
       }
 
@@ -149,7 +139,7 @@ var initApp = function (app, ssl) {
   if (app.get('env') === 'development') {
     logger.level = 'debug';
     logger.debug('running in development env');
-    app.use(errorHandler({dumpExceptions: true, showStack: true}));
+    app.use(errorHandler({ dumpExceptions: true, showStack: true }));
   }
   ;
 
@@ -160,48 +150,10 @@ var initApp = function (app, ssl) {
   }
   ;
 
-  // login and logout url routing
-  app.post('/login',
-    passport.authenticate('local', {
-      successRedirect: '/',
-      failureRedirect: '/loginFail'
-    })
-  );
 
+  app.use('/', require('../routes/index.js'));
+  app.use('/api/ceph', apiAuthentication, require('../routes/cephRouter.js'))
 
-  app.get('/login', routes.login);
-  app.get('/loginFail', routes.loginFail);
-  app.get('/logout', routes.logout);
-
-  // test sankey
-  app.get('/sankey', function (req, res) {
-    res.render('sankey');
-  });
-
-
-  // other url routing
-
-  /** partial views **/
-  app.get('/partial/:name', routes.partial);
-  if (ssl) {
-    // let routes.index handle authentication
-    app.get('/dashboard', routes.index);
-  
-
-    // redirect all others to the index (HTML5 history)
-    app.get('/', routes.index);
-
-  } else {
-    app.get('/dashboard', apiAuthentication, routes.index);
- 
-
-    // redirect all others to the index (HTML5 history)
-    app.get('/', apiAuthentication, routes.index);
-  }
-
-  // --JSON API--
-
-  // UI
 
 
 }
@@ -212,8 +164,8 @@ var onAppStart = function (ssl) {
   // Connect to mongodb
   var connect = function () {
     var options = {
-      server: {socketOptions: {keepAlive: 1, connectTimeoutMS: 30000}},
-      replset: {socketOptions: {keepAlive: 1, connectTimeoutMS: 30000}}
+      server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+      replset: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } }
     };
     var conn = mongoose.connect(config.database, options);
   };
@@ -244,7 +196,7 @@ var onAppStart = function (ssl) {
   //io.on('connection', socket.socketOnConnect);
   // start server
   server.listen(app.get('port'), function () {
-    logger.info('Express server listening on port ' + app.get('port') + ' @' + app.get('env'));
+    logger.info('server listening on port ' + app.get('port') + ' @' + app.get('env'));
   });
 }
 
