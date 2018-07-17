@@ -1,6 +1,5 @@
 // app require
 var express = require('express');
-var fs = require('fs');
 var http = require('http');
 var path = require('path');
 var mongoose = require('mongoose');
@@ -22,19 +21,11 @@ var routes = require('../routes/index.js');
 var logger = require('./common').logger
 
 
-//set logger format
-
 
 // fixed mongoose event memory leak: https://github.com/Automattic/mongoose/issues/1992
 mongoose.Promise = global.Promise;
 
-// Bootstrap models
-var models_path = __dirname + '/../collections';
-fs.readdirSync(models_path).forEach(function (file) {
-  if (~file.indexOf('.js')) {
-    require(models_path + '/' + file);
-  }
-})
+
 
 // api authentication
 var apiUseAuthentication = function (req, res, next) {
@@ -56,6 +47,7 @@ var apiUseAuthentication = function (req, res, next) {
 };
 
 var apiNoAuthentication = function (req, res, next) {
+    logger.debug("req.body: "+JSON.stringify(req.body));
   req.user = {
     username: 'admin@gushenxing.com',
     name: 'Admin',
@@ -93,7 +85,7 @@ var initApp = function (app, ssl) {
   }));
   app.use(bodyParser.json());
   app.use(cookieParser());
-  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(bodyParser.urlencoded({ extended: false }));
   app.use(express.static(path.join(__dirname, '/../public')));
   app.use(morgan('combined', {
     skip: function (req, res) {
@@ -151,10 +143,8 @@ var initApp = function (app, ssl) {
   ;
 
 
-  app.use('/', require('../routes/index.js'));
+  app.use('/',require('../routes/index.js'));
   app.use('/api/ceph', apiAuthentication, require('../routes/cephRouter.js'))
-
-
 
 }
 

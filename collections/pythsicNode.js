@@ -20,5 +20,5 @@ var NodeSchema = new Schema (
     }
 );
 
-mongoose.model('PNode', NodeSchema);
+module.exports = mongoose.model('PNode', NodeSchema);
 
