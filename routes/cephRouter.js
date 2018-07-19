@@ -1,7 +1,8 @@
 const router = require('express').Router();
 var logger = require('../services/common').logger;
-var DataNode=require('../collections/dataNode.js')
-var mongoose=require('mongoose');
+var DataNode = require('../collections/dataNode.js')
+var mongoose = require('mongoose');
+var cephManage = require('../services/cephManage.js');
 
 
 router.get('/', function (req, res) {
@@ -24,25 +25,54 @@ router.get('/test', function (req, res) {
 
 });
 
+router.get('/disks/:ip', function (req, res) {
+    let ip = req.params.ip;
 
-
-router.get('/dataNode',function(req,res){
-    DataNode.find({},function(err,docs){
-        if(err){
-            logger.error("Error whilequery dataNode",err);
+    cephManage.getServerDisks(ip, function (err, data, errData) {
+        if (err) {
             res.json({
-                data:{},
-                code:5,
-                message:err
+                data: {},
+                code: 2,
+                message: err
+            });
+        }
+
+        if (data) {
+            res.json({
+                data: data,
+                code: 0,
+                message: "ok"
+            });
+        }
+
+        if (errData) {
+            res.json({
+                data: {},
+                code: 2,
+                message: errData
+            });
+        }
+    });
+
+});
+
+router.get('/dataNode', function (req, res) {
+    DataNode.find({}, function (err, docs) {
+        if (err) {
+            logger.error("Error whilequery dataNode", err);
+            res.json({
+                data: {},
+                code: 5,
+                message: err
             });
 
             return;
         }
 
         res.json({
-            data:docs,
-            code:0,
-            message:'ok'
+            data: docs,
+            code: 0,
+            message: 'ok'
         });
     });
 });
@@ -53,6 +83,7 @@ router.get('/dataNode',function(req,res){
  * PARAMS:
  *  name    string
  *    ip    string
+ *     
  */
 router.post('/saveDataNode', function (req, res) {
     //logger.debug("req name"+" "+JSON.stringify(req.body));
@@ -77,7 +108,7 @@ router.post('/saveDataNode', function (req, res) {
     }
 
     var dataNode = new DataNode({
-        _id:new mongoose.Types.ObjectId(),
+        _id: new mongoose.Types.ObjectId(),
         ip: '192.168.3.145',
         name: 'data_node_1'
     });

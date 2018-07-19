@@ -7,6 +7,7 @@
 
 var shell = require('shelljs');
 var logger = require('../services/common.js').logger;
+var cephManage=require('../services/cephManage.js');
 
 var Client = require('ssh2').Client;
 
@@ -51,22 +52,22 @@ var loginInfo={
 // }
 
 
-var remoteExec=function(loginInfo,cmd,callback){
-    conn.on('ready', function() {
-        conn.exec(cmd, function(err, stream) {
-          if (err) throw callback(err);
-          stream.on('close', function(code, signal) {
-            //console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-            conn.end();
-          }).on('data', function(data) {
-            callback(null,data)
-          }).stderr.on('data', function(data) {
-              callback(null,null,data);
-            stream.destroy();
-          });
-        });
-      }).connect(loginInfo);
-}
+// var remoteExec=function(loginInfo,cmd,callback){
+//     conn.on('ready', function() {
+//         conn.exec(cmd, function(err, stream) {
+//           if (err) throw callback(err);
+//           stream.on('close', function(code, signal) {
+//             //console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+//             conn.end();
+//           }).on('data', function(data) {
+//             callback(null,data)
+//           }).stderr.on('data', function(data) {
+//               callback(null,null,data);
+//             stream.destroy();
+//           });
+//         });
+//       }).connect(loginInfo);
+// }
 // var sshClient = connect(conn);
 
 // sshClient.then(function (conn) {
@@ -110,9 +111,11 @@ var remoteExec=function(loginInfo,cmd,callback){
 // });
 
 
-remoteExec(loginInfo,"sudo fdisk -l",function(err,data,errData){
-    if(err) throw err;
-    if(data) console.log(data.toString());
-    if(errData) logger.error(errData.toString());
+// remoteExec(loginInfo,"sudo fdisk -l",function(err,data,errData){
+//     if(err) throw err;
+//     if(data) console.log(data.toString());
+//     if(errData) logger.error(errData.toString());
     
-})
+// })
+
+cephManage.getServerDisks('192.168.3.10');

@@ -24,11 +24,13 @@ exports.remoteExec=function(loginInfo,cmd,callback){
             //console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
             conn.end();
           }).on('data', function(data) {
-            callback(null,data)
+            callback(null,data.toString())
           }).stderr.on('data', function(data) {
-              callback(null,null,data);
+              callback(null,null,data.toString());
             stream.destroy();
           });
         });
       }).connect(loginInfo);
 }
+
+
