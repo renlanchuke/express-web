@@ -8,6 +8,7 @@
 var shell = require('shelljs');
 var logger = require('../services/common.js').logger;
 var cephManage=require('../services/cephManage.js');
+var request=require('../services/request.js')
 
 var Client = require('ssh2').Client;
 
@@ -118,4 +119,9 @@ var loginInfo={
     
 // })
 
-cephManage.getServerDisks('192.168.3.10');
+//cephManage.getServerDisks('192.168.3.10');
+
+request.getServerInfo('http://192.168.3.12:7000',function(err,data){
+
+});
+

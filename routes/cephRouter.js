@@ -1,7 +1,8 @@
 const router = require('express').Router();
 var logger = require('../services/common').logger;
 var DataNode = require('../collections/dataNode.js')
-var mongoose = require('mongoose');
+var pNode = require('../collections/PNode.js');
+
 var cephManage = require('../services/cephManage.js');
 
 
@@ -27,6 +28,17 @@ router.get('/test', function (req, res) {
 
 router.get('/disks/:ip', function (req, res) {
     let ip = req.params.ip;
+
+    var pattern = /^((25[0-5]|2[0-4]\d|[1]{1}\d{1}\d{1}|[1-9]{1}\d{1}|\d{1})($|(?!\.$)\.)){4}$/
+    if (!pattern.test(ip)) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "NOT Correct IP Address"
+        });
+
+        return;
+    }
 
     cephManage.getServerDisks(ip, function (err, data, errData) {
         if (err) {
@@ -56,10 +68,10 @@ router.get('/disks/:ip', function (req, res) {
 
 });
 
-router.get('/dataNode', function (req, res) {
-    DataNode.find({}, function (err, docs) {
+router.get('/pnode/:hostname', function (req, res) {
+    cephManage.getPNodeByHostname(req.params.hostname, function (err, pnode) {
         if (err) {
-            logger.error("Error whilequery dataNode", err);
+            logger.error("Error while query dataNode", err);
             res.json({
                 data: {},
                 code: 5,
@@ -70,7 +82,7 @@ router.get('/dataNode', function (req, res) {
         }
 
         res.json({
-            data: docs,
+            data: pnode,
             code: 0,
             message: 'ok'
         });
@@ -85,13 +97,13 @@ router.get('/dataNode', function (req, res) {
  *    ip    string
  *     
  */
-router.post('/saveDataNode', function (req, res) {
+router.post('/savePNode', function (req, res) {
     //logger.debug("req name"+" "+JSON.stringify(req.body));
-    if (!req.body.name) {
+    if (!req.body.hostname) {
         res.json({
             data: {},
             code: 5,
-            message: "No Nodedata Name"
+            message: "No node hostname"
         });
 
         return;
@@ -101,21 +113,21 @@ router.post('/saveDataNode', function (req, res) {
         res.json({
             data: {},
             code: 5,
-            message: "No Nodedata Ip"
+            message: "No Ip"
         });
 
         return;
     }
 
-    var dataNode = new DataNode({
-        _id: new mongoose.Types.ObjectId(),
-        ip: '192.168.3.145',
-        name: 'data_node_1'
+    var PNode = new pNode({
+        _id: req.body.ip,
+        ip: req.body.ip,
+        hostname: req.body.hostname
     });
 
-    dataNode.save(function (err) {
+    PNode.save(function (err) {
         if (err) {
-            logger.error('Error while save dataNode!', err);
+            logger.error('Error while save Node!', err);
             res.json({
                 data: {},
                 code: 4,
