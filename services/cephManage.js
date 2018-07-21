@@ -44,6 +44,12 @@ exports.getPNodeByHostname = function (hostname, callback) {
             callback(err);
             return;
         }
+
+        if (!doc) {
+            callback('NO PNode find');
+            return;
+        }
+
         request.getServerInfo(function (err, serInfo) {
             if (err) {
                 callback(err);
@@ -71,3 +77,120 @@ exports.getPNodeByHostname = function (hostname, callback) {
 
     })
 }
+
+
+exports.getPNodeByIp = function (ip, callback) {
+    PNode.findOne({ 'ip': ip }, function (err, doc) {
+        if (err) {
+            logger.error("Error while query PNode", err);
+            callback(err);
+            return;
+        }
+
+        if (!doc) {
+            callback('NO PNode find');
+            return;
+        }
+        request.getServerInfo(function (err, serInfo) {
+            if (err) {
+                callback(err);
+                return;
+            }
+
+            for (let i of serInfo) {
+                if (doc.hostname === i.hostname) {
+
+                    doc.isMon = i.mon;
+                    doc.isRgw = i.rgw;
+                    doc.isMDS = i.mds;
+                    doc.isMgr = i.mgr
+                    doc.osds = i.osd;
+                }
+            }
+            doc.save(function (err) {
+                if (err) callback(err);
+                else {
+                    callback(null, doc);
+                }
+            })
+
+        })
+
+    })
+}
+
+/**
+ * get OSD info from remote server
+ * @param {*} ip 
+ * @param {*} osd 
+ * @param {*} callback 
+ */
+exports.getOSDInfo = function (ip, osd, callback) {
+    let loginInfo = {
+        host: ip,
+        port: 22,
+        username: 'gushenxing',
+        password: 'gushenxing123'
+    };
+    osd = osd.replace('.', '-').replace('osd', 'ceph');
+    let arr = [];
+    let ceph_fsid = '';
+
+    let result = new Object();
+    sshClient.remoteExec(loginInfo, "sudo cat /var/lib/ceph/osd/" + osd + "/fsid\n" +
+        "sudo lvscan\n" + "sudo pvscan\n"
+        , function (err, data, errData) {
+            if (err) {
+                logger.error(data)
+                callback(err);
+                return;
+            }
+            if (data && data != '') {
+
+                //data = data.replace('\n', '');
+
+                arr = data.split('\n\n');
+                result.fsid = arr[0].trim();
+                console.log(result.fsid);
+                for (let i = 1; i < arr.length; i++) {
+                    // logger.info(arr);
+                    if (arr[i].indexOf(result.fsid) > 0) {
+
+                        //console.log(ceph_fsid);
+                        let from = arr[i].indexOf('\'/dev/') + 6;
+                        let len = arr[i].indexOf('\/osd-block') - from;
+                        ceph_fsid = arr[i].substr(from, len);
+
+                        from = arr[i].indexOf('[') + 1;
+                        len = arr[i].indexOf(']') - from
+                        result.size = arr[i].substr(from, len);
+                        result.ceph_fsid = ceph_fsid;
+
+                        arr[i] = '';
+
+                    }
+
+                    if (ceph_fsid.length > 0 && arr[i].indexOf(result.ceph_fsid) > 0) {
+
+
+                        //console.log(ceph_fsid);
+                        let from = arr[i].indexOf('PV ') + 3;
+                        let len = arr[i].indexOf('   VG') - from;
+                        result.disk = arr[i].substr(from, len);
+
+                    }
+                }
+                logger.info(result);
+            }
+
+            if (errData) {
+                callback(null, null, errData);
+                logger.error(errData)
+            }
+        });
+}
+
+exports.createOSD=function(ip, disk){
+    
+}
+

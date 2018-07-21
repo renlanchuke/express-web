@@ -7,13 +7,13 @@
 
 var shell = require('shelljs');
 var logger = require('../services/common.js').logger;
-var cephManage=require('../services/cephManage.js');
-var request=require('../services/request.js')
+var cephManage = require('../services/cephManage.js');
+var request = require('../services/request.js')
 
 var Client = require('ssh2').Client;
 
 var conn = new Client();
-var loginInfo={
+var loginInfo = {
     host: '192.168.3.10',
     port: 22,
     username: 'gushenxing',
@@ -116,12 +116,18 @@ var loginInfo={
 //     if(err) throw err;
 //     if(data) console.log(data.toString());
 //     if(errData) logger.error(errData.toString());
-    
+
 // })
 
-//cephManage.getServerDisks('192.168.3.10');
+// cephManage.getServerDisks('192.168.3.10');
 
-request.getServerInfo('http://192.168.3.12:7000',function(err,data){
+// request.getServerInfo('http://192.168.3.12:7000',function(err,data){
+
+// });
+
+cephManage.getOSDInfo('192.168.3.12', 'osd.2', function (err, data, errData) {
 
 });
+
+
 

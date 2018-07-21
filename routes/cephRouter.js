@@ -68,8 +68,46 @@ router.get('/disks/:ip', function (req, res) {
 
 });
 
+/**
+ * GET PNode by hostname
+ * @param hostname
+ * 
+ */
 router.get('/pnode/:hostname', function (req, res) {
     cephManage.getPNodeByHostname(req.params.hostname, function (err, pnode) {
+        if (err) {
+            logger.error("Error while query dataNode", err);
+            res.json({
+                data: {},
+                code: 5,
+                message: err
+            });
+
+            return;
+        }
+
+        res.json({
+            data: pnode,
+            code: 0,
+            message: 'ok'
+        });
+    });
+});
+
+router.get('/pnode_by_ip/:ip', function (req, res) {
+    let ip = req.params.ip;
+    if (!ip_exam(ip)) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "NOT Correct IP Address"
+        });
+
+        return;
+    }
+
+
+    cephManage.getPNodeByIp(ip, function (err, pnode) {
         if (err) {
             logger.error("Error while query dataNode", err);
             res.json({
@@ -144,7 +182,10 @@ router.post('/savePNode', function (req, res) {
 });
 
 
-
+function ip_exam(ip) {
+    var pattern = /^((25[0-5]|2[0-4]\d|[1]{1}\d{1}\d{1}|[1-9]{1}\d{1}|\d{1})($|(?!\.$)\.)){4}$/
+    return pattern.test(ip);
+}
 
 
 module.exports = router;
