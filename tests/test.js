@@ -125,9 +125,23 @@ var loginInfo = {
 
 // });
 
-cephManage.getOSDInfo('192.168.3.12', 'osd.2', function (err, data, errData) {
+// cephManage.getOSDInfo('192.168.3.12', 'osd.2', function (err, data, errData) {
 
-});
+// });
 
+cephManage.deleteOSD('192.168.3.12', 'osd.2', function (err, data, errData) {
+    if (err) {
+        logger.error(err);
+    }
+
+    if (data) {
+        logger.info(data)
+
+    }
+
+    if (errData) {
+        logger.error(eerrorrrData);
+    }
+})
 
 

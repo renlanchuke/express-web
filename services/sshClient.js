@@ -15,23 +15,38 @@ var conn = new Client();
  *  };
  * @param cmd "ls -l"
  * @param callback (err,data,ereData){}
+ * 
  */
 exports.remoteExec = function (loginInfo, cmd, callback) {
     conn.on('ready', function () {
         let result = '';
-        let errResult='';
+        let errResult = '';
         conn.exec(cmd, function (err, stream) {
-            if (err) throw callback(err);
+            if (err) {
+                callback(err);
+                return;
+            }
             stream.on('close', function (code, signal) {
-                //console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-                callback(null, result)
                 conn.end();
+                //logger.info(result);
+                if (result !== '') {
+                    callback(null, result);
+                    return;
+                }
+
+
+                if (errResult != '') {
+                    //callback(null, null, errResult);
+                    return;
+                }
+
             }).on('data', function (data) {
                 if (result == '') result = data + '\n';
                 else result = result + '\n' + data;
             }).stderr.on('data', function (data) {
-                callback(null, null, data.toString());
-                stream.destroy();
+                result = result + "\n" + data;
+                conn.end();
+                return;
             });
         });
     }).connect(loginInfo);

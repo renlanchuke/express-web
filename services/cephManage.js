@@ -2,7 +2,6 @@ var logger = require('./common.js').logger;
 var sshClient = require('./sshClient.js');
 var PNode = require('../collections/PNode.js');
 var request = require('./request.js');
-
 /**
  * get all disks from the remote server
  * @param {*} ip 
@@ -125,7 +124,7 @@ exports.getPNodeByIp = function (ip, callback) {
  * @param {*} osd 
  * @param {*} callback 
  */
-exports.getOSDInfo = function (ip, osd, callback) {
+function getOSDInfo(ip, osd, callback) {
     let loginInfo = {
         host: ip,
         port: 22,
@@ -140,8 +139,7 @@ exports.getOSDInfo = function (ip, osd, callback) {
     sshClient.remoteExec(loginInfo, "sudo cat /var/lib/ceph/osd/" + osd + "/fsid\n" +
         "sudo lvscan\n" + "sudo pvscan\n"
         , function (err, data, errData) {
-            if (err) {
-                logger.error(data)
+            if (err && err !== '') {
                 callback(err);
                 return;
             }
@@ -151,7 +149,7 @@ exports.getOSDInfo = function (ip, osd, callback) {
 
                 arr = data.split('\n\n');
                 result.fsid = arr[0].trim();
-                console.log(result.fsid);
+
                 for (let i = 1; i < arr.length; i++) {
                     // logger.info(arr);
                     if (arr[i].indexOf(result.fsid) > 0) {
@@ -180,17 +178,102 @@ exports.getOSDInfo = function (ip, osd, callback) {
 
                     }
                 }
-                logger.info(result);
+                callback(null, result)
+                //logger.info(result);
             }
 
-            if (errData) {
+            if (errData && errData !== '') {
                 callback(null, null, errData);
                 logger.error(errData)
             }
         });
 }
 
-exports.createOSD=function(ip, disk){
-    
+exports.createOSD = function (hostname, disk, callback) {
+    let loginInfo = {
+        host: getAdminIp(),
+        port: 22,
+        username: 'gushenxing',
+        password: 'gushenxing123'
+    };
+
+    sshClient.remoteExec(loginInfo, "ceph-deploy osd create --data " + disk + " " + hostname, function (err, data, errData) {
+        let arr = new Array();
+        let result = [];
+        if (err) callback(err);
+        if (data) {
+            callback(null, data);
+            //console.log(result.toString());
+        }
+        if (errData) {
+            callback(null, null, errData)
+        }
+    });
+
 }
 
+exports.deleteOSD = function (ip, osd, callback) {
+    let loginInfo = {
+        host: ip,
+        port: 22,
+        username: 'gushenxing',
+        password: 'gushenxing123'
+    };
+
+    getOSDInfo(ip, osd, function (err, osdInfo, errData) {
+        //logger.info(osdInfo);
+        if (err) {
+
+            callback(err);
+
+            return;
+        }
+        if (errData) {
+
+            callback(null, null, errData);
+
+            return;
+        }
+        logger.info(osdInfo);
+    });
+
+
+    let osd_num = osd.replace('osd.', '');
+    let out_osd = "sudo ceph osd out " + osd_num + "\n";
+    let stop_osd = "sudo systemctl stop ceph-osd@" + osd_num + ".service\n";
+    let remove_osd = "sudo ceph osd crush remove " + osd + "\n";
+    let remove_auth = "sudo ceph auth del " + osd + "\n";
+    let delete_osd = "sudo ceph osd rm " + osd_num + "\n"
+
+    let cmd = out_osd + stop_osd + remove_osd + remove_auth + delete_osd;
+
+    //let cmd = out_osd;
+
+    console.log(cmd);
+    sshClient.remoteExec(loginInfo, cmd, function (err, data, errData) {
+
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        if (data) {
+            callback(null, data);
+            //console.log(result.toString());
+        }
+
+        if (errData) {
+            callback(null, null, errData)
+        }
+    });
+
+
+
+
+}
+
+function getAdminIp() {
+    return "192.168.3.9";
+}
+
+exports.getOSDInfo = getOSDInfo;
