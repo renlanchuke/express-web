@@ -125,18 +125,12 @@ exports.getPNodeByIp = function (ip, callback) {
  * @param {*} callback 
  */
 function getOSDInfo(ip, osd, callback) {
-    let loginInfo = {
-        host: ip,
-        port: 22,
-        username: 'gushenxing',
-        password: 'gushenxing123'
-    };
     osd = osd.replace('.', '-').replace('osd', 'ceph');
     let arr = [];
     let ceph_fsid = '';
 
     let result = new Object();
-    sshClient.remoteExec(loginInfo, "sudo cat /var/lib/ceph/osd/" + osd + "/fsid\n" +
+    sshClient.remoteExec(getLoginInfo(ip), "sudo cat /var/lib/ceph/osd/" + osd + "/fsid\n" +
         "sudo lvscan\n" + "sudo pvscan\n"
         , function (err, data, errData) {
             if (err && err !== '') {
@@ -189,15 +183,150 @@ function getOSDInfo(ip, osd, callback) {
         });
 }
 
-exports.createOSD = function (hostname, disk, callback) {
-    let loginInfo = {
-        host: getAdminIp(),
-        port: 22,
-        username: 'gushenxing',
-        password: 'gushenxing123'
-    };
+/**
+ * get mgr dump info from mgr node
+ * @param {*} ip 
+ * @param {*} callback 
+ */
+function getMgrDump(ip, callback) {
 
-    sshClient.remoteExec(loginInfo, "ceph-deploy osd create --data " + disk + " " + hostname, function (err, data, errData) {
+    sshClient.remoteExec(getLoginInfo(ip), "sudo ceph mgr dump"
+        , function (err, data, errData) {
+            if (err && err !== '') {
+                callback(err);
+                return;
+            }
+            if (data) {
+                callback(null, data);
+            }
+
+            if (errData && errData !== '') {
+                callback(errData, null);
+                logger.error(errData)
+            }
+        });
+}
+
+/**
+ * create mgr daemon of mgr node
+ * @param {*} ip 
+ * @param {*} callback 
+ */
+function createMgr(ip, callback) {
+    let loginInfo = getLoginInfo(getAdminIp);
+    PNode.findById(ip, (err, doc) => {
+        if (err) {
+            callback(err);
+            return;
+        }
+        if (doc) {
+            sshClient.remoteExec(loginInfo, "ceph-deploy mgr create " + doc.hostname
+                , function (err, data, errData) {
+                    if (err && err !== '') {
+                        callback(err);
+                        return;
+                    }
+                    if (data) {
+                        callback(null, data);
+                    }
+
+                    if (errData && errData !== '') {
+                        callback(errData, null);
+                        logger.error(errData)
+                    }
+                });
+
+            doc.isMgr = true;
+            doc.save((err) => {
+                callback(err);
+            });
+        } else {
+            callback("The Mgr node dosn't exist");
+        }
+
+    });
+
+}
+
+/**
+ * stop mgr daemon of mgr node
+ * @param {*} ip 
+ * @param {*} callback 
+ */
+function stopMgr(ip, callback) {
+    let loginInfo = getLoginInfo(getAdminIp);
+    PNode.findById(ip, (err, doc) => {
+        if (err) {
+            callback(err);
+            return;
+        }
+        if (doc) {
+            sshClient.remoteExec(getLoginInfo(ip), "sudo systemctl stop ceph-mgr@" + doc.hostname + ".service"
+                , function (err, data, errData) {
+                    if (err && err !== '') {
+                        callback(err);
+                        return;
+                    }
+                    if (data) {
+                        callback(null, data);
+                    }
+
+                    if (errData && errData !== '') {
+                        callback(errData, null);
+                        logger.error(errData)
+                    }
+                });
+        } else {
+            callback("The Mgr node dosn't exist");
+        }
+
+    });
+
+}
+
+function startpMgr(ip, callback) {
+    PNode.findById(ip, (err, doc) => {
+        if (err) {
+            callback(err);
+            return;
+        }
+        if (doc) {
+            sshClient.remoteExec(getLoginInfo(ip), "sudo systemctl start ceph-mgr@" + doc.hostname + ".service"
+                , function (err, data, errData) {
+                    if (err && err !== '') {
+                        callback(err);
+                        return;
+                    }
+                    if (data) {
+                        callback(null, data);
+                    }
+
+                    if (errData && errData !== '') {
+                        callback(errData, null);
+                        logger.error(errData)
+                    }
+                });
+        } else {
+            callback("The Mgr node dosn't exist");
+        }
+
+    });
+
+}
+
+
+/**
+ * create osd from hostname and disk
+ * @param {*} hostname 
+ * @param {*} disk 
+ * @param {*} callback  
+ * ATTENTION: the callback return data can't inform
+ * if create osd successfull
+ */
+exports.createOSD = function (hostname, disk, callback) {
+    let loginInfo = getLoginInfo(getAdminIp());
+
+    sshClient.remoteExec(loginInfo, "cd /home/gushenxing/my-cluster\n" + "ceph-deploy osd create --data " + disk + " " + hostname, function (err, data, errData) {
         let arr = new Array();
         let result = [];
         if (err) callback(err);
@@ -211,14 +340,8 @@ exports.createOSD = function (hostname, disk, callback) {
     });
 
 }
-
+//delete osd and delete volume on disk
 exports.deleteOSD = function (ip, osd, callback) {
-    let loginInfo = {
-        host: ip,
-        port: 22,
-        username: 'gushenxing',
-        password: 'gushenxing123'
-    };
 
     getOSDInfo(ip, osd, function (err, osdInfo, errData) {
         //logger.info(osdInfo);
@@ -235,45 +358,74 @@ exports.deleteOSD = function (ip, osd, callback) {
             return;
         }
         logger.info(osdInfo);
-    });
 
 
-    let osd_num = osd.replace('osd.', '');
-    let out_osd = "sudo ceph osd out " + osd_num + "\n";
-    let stop_osd = "sudo systemctl stop ceph-osd@" + osd_num + ".service\n";
-    let remove_osd = "sudo ceph osd crush remove " + osd + "\n";
-    let remove_auth = "sudo ceph auth del " + osd + "\n";
-    let delete_osd = "sudo ceph osd rm " + osd_num + "\n"
+        //delele OSD cmd
+        let osd_num = osd.replace('osd.', '');
+        let out_osd = "sudo ceph osd out " + osd_num + "\n";
+        let stop_osd = "sudo systemctl stop ceph-osd@" + osd_num + ".service\n";
+        let remove_osd = "sudo ceph osd crush remove " + osd + "\n";
+        let remove_auth = "sudo ceph auth del " + osd + "\n";
+        let delete_osd = "sudo ceph osd rm " + osd_num + "\n"
 
-    let cmd = out_osd + stop_osd + remove_osd + remove_auth + delete_osd;
+        //delete logical volume,volume group and of the OSD
+        //logical volume
+        let logicalVolueme = osdInfo.ceph_fsid + "/osd-block-" + osdInfo.fsid;
+        let rmLV = "echo \"y\"|sudo lvremove " + logicalVolueme + "\n";
 
-    //let cmd = out_osd;
+        //delete volume group
+        let rmVG = "sudo vgremove " + osdInfo.ceph_fsid + "\n";
 
-    console.log(cmd);
-    sshClient.remoteExec(loginInfo, cmd, function (err, data, errData) {
+        //delete physic volume
+        let rmPV = "sudo pvremove " + osdInfo.disk + "\n";
 
-        if (err) {
-            callback(err);
-            return;
-        }
 
-        if (data) {
-            callback(null, data);
-            //console.log(result.toString());
-        }
+        let deleteOSDcmd = out_osd + stop_osd + remove_osd + remove_auth + delete_osd;
+        let deleteVolumecmd = rmLV + rmVG + rmPV;
 
-        if (errData) {
-            callback(null, null, errData)
-        }
+        //let cmd = out_osd;
+
+        //console.log(deleteVolumecmd);
+        sshClient.remoteExec(loginInfo, deleteOSDcmd + deleteVolumecmd, function (err, data, errData) {
+
+            if (err) {
+                callback(err);
+                return;
+            }
+
+            if (data) {
+                callback(null, data);
+                //console.log(result.toString());
+            }
+
+            if (errData) {
+                callback(null, null, errData)
+            }
+        });
+
     });
 
 
 
 
 }
-
+//get admin node ip address
 function getAdminIp() {
     return "192.168.3.9";
 }
 
+//get {ip} node ssh login info
+function getLoginInfo(ip) {
+    return loginInfo = {
+        host: ip,
+        port: 22,
+        username: 'gushenxing',
+        password: 'gushenxing123'
+    };
+}
+
 exports.getOSDInfo = getOSDInfo;
+exports.getMgrDump = getMgrDump;
+exports.stopMgr = stopMgr;
+exports.startpMgr = startpMgr;
+exports.createMgr = createMgr;

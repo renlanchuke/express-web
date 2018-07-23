@@ -1,7 +1,6 @@
 
 var logger = require('../services/common.js').logger;
 var Client = require('ssh2').Client;
-var conn = new Client();
 
 /**
  * ssh client to exec cmd on remote server
@@ -18,16 +17,19 @@ var conn = new Client();
  * 
  */
 exports.remoteExec = function (loginInfo, cmd, callback) {
+
+    var conn = new Client();
     conn.on('ready', function () {
         let result = '';
         let errResult = '';
         conn.exec(cmd, function (err, stream) {
+            logger.info("\nexec cmd:-----------------------------------\n", cmd, "\n-----------------------------------------end");
             if (err) {
                 callback(err);
                 return;
             }
             stream.on('close', function (code, signal) {
-                conn.end();
+
                 //logger.info(result);
                 if (result !== '') {
                     callback(null, result);
@@ -40,9 +42,12 @@ exports.remoteExec = function (loginInfo, cmd, callback) {
                     return;
                 }
 
+                conn.end();
+
             }).on('data', function (data) {
-                if (result == '') result = data + '\n';
-                else result = result + '\n' + data;
+
+                if (result == '') result = data.toString() + '\n';
+                else result = result + '\n' + data.toString();
             }).stderr.on('data', function (data) {
                 result = result + "\n" + data;
                 conn.end();
@@ -53,6 +58,7 @@ exports.remoteExec = function (loginInfo, cmd, callback) {
 }
 
 exports.remoteShell = function (loginInfo, cmd, callback) {
+    var conn = new Client();
     conn.on('ready', function () {
         console.log('Client :: ready');
         conn.shell(function (err, stream) {

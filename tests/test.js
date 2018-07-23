@@ -129,19 +129,31 @@ var loginInfo = {
 
 // });
 
-cephManage.deleteOSD('192.168.3.12', 'osd.2', function (err, data, errData) {
-    if (err) {
-        logger.error(err);
-    }
+// cephManage.deleteOSD('192.168.3.12', 'osd.2', function (err, data, errData) {
+//     if (err) {
+//         logger.error(err);
+//     }
 
-    if (data) {
-        logger.info(data)
+//     if (data) {
+//         logger.info(data)
 
-    }
+//     }
 
-    if (errData) {
-        logger.error(eerrorrrData);
-    }
+//     if (errData) {
+//         logger.error(eerrorrrData);
+//     }
+// })
+
+// cephManage.createOSD('node10', '/dev/sdb', function (err, data) {
+//     if (err) throw err;
+
+//     if (data) logger.info(data);
+// })
+
+cephManage.getMgrDump('192.168.3.12', function (err, data, errData) {
+    if (err) logger.info(err);
+    if (data) logger.info(data);
+    if (errData) logger.info(errData);
 })
 
 

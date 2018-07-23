@@ -130,12 +130,11 @@ router.get('/pnode_by_ip/:ip', function (req, res) {
 /**
  * WARNING: no duplicate check
  * METHOD: POST
- * PARAMS:
  *  name    string
  *    ip    string
  *     
  */
-router.post('/savePNode', function (req, res) {
+router.post('/pNode', function (req, res) {
     //logger.debug("req name"+" "+JSON.stringify(req.body));
     if (!req.body.hostname) {
         res.json({
@@ -180,6 +179,211 @@ router.post('/savePNode', function (req, res) {
         }
     });
 });
+
+
+
+
+router.get('/pNode', function (req, res) {
+    pNode.find({}, (err, docs) => {
+        if (err) res.json({
+            data: {},
+            code: 4,
+            message: err
+        });
+
+        res.json({
+            data: {},
+            code: 0,
+            message: docs
+        });
+    })
+});
+/**
+ * create Mgr node
+ * METHOD PUT
+ * @param hostname
+ * @param ip
+ */
+router.post('/mgrNode', function (req, res) {
+    //logger.debug("req name"+" "+JSON.stringify(req.body));
+    if (!req.body.hostname) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "No node hostname"
+        });
+
+        return;
+    }
+
+    if (!req.body.ip) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "No Ip"
+        });
+
+        return;
+    }
+
+    var PNode = new pNode({
+        _id: req.body.ip,
+        ip: req.body.ip,
+        hostname: req.body.hostname,
+        isMgr: true
+    });
+
+    PNode.save(function (err) {
+        if (err) {
+            logger.error('Error while save Node!', err);
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            })
+        } else {
+            res.json({
+                data: {},
+                code: 0,
+                message: "Save Successful"
+            });
+        }
+    });
+});
+
+/**
+ * get mgrNode Info
+ * METHOD GET
+ */
+router.get('/mgrNode', function (req, res) {
+    pNode.find({ 'isMgr': true }, (err, docs) => {
+
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            });
+            return;
+        }
+        let result = [];
+
+        cephManage.getMgrDump(docs[0].ip, (err, data) => {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            if (!data) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: "can't find mgr node!"
+                });
+            }
+            let mgrDump = JSON.parse(data);
+
+            logger.debug(data);
+            for (let mgrNode of docs) {
+
+                let resNode = {
+                    hostname: mgrNode.hostname,
+                    ip: mgrNode.ip,
+                    state: "stop"
+                }
+
+                if (resNode.hostname === mgrDump.active_name) {
+                    resNode.state = "running"
+                } else {
+                    for (let sandby of mgrDump.standbys) {
+                        if (resNode.hostname === sandby.name) {
+                            resNode.state = "sandby"
+                        }
+                    }
+                }
+                result.push(resNode);
+            }
+
+            res.json({
+                data: result,
+                code: 0,
+                message: "ok"
+            });
+
+        });
+    })
+});
+
+/**
+ * change mgrNode state
+ * METHOD GET
+ */
+router.put('/mgrNode/:ip', function (req, res) {
+    if (req.body.state === "stop") {
+        cephManage.stopMgr(req.params.ip, function (err) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 5,
+                    message: err
+                });
+            } else {
+                res.json({
+                    data: {},
+                    code: 0,
+                    message: "ok"
+                });
+            }
+        });
+    } else if (req.body.state === "sandby") {
+        cephManage.startpMgr(req.params.ip, function (err) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 5,
+                    message: err
+                });
+            } else {
+                res.json({
+                    data: {},
+                    code: 0,
+                    message: "ok"
+                });
+            }
+        });
+    } else if (req.body.state === "create") {
+        cephManage.createMgr(req.params.ip, function (err) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 5,
+                    message: err
+                });
+            } else {
+                res.json({
+                    data: {},
+                    code: 0,
+                    message: "ok"
+                });
+            }
+        });
+    } else {
+        res.json({
+            data: {},
+            code: 5,
+            message: "state only support 'stop','sandby' and 'create'"
+        })
+    }
+});
+
+router.delete('/mgrNode')
+
+
+
 
 
 function ip_exam(ip) {
