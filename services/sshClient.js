@@ -19,42 +19,47 @@ var Client = require('ssh2').Client;
 exports.remoteExec = function (loginInfo, cmd, callback) {
 
     var conn = new Client();
-    conn.on('ready', function () {
-        let result = '';
-        let errResult = '';
-        conn.exec(cmd, function (err, stream) {
-            logger.info("\nexec cmd:-----------------------------------\n", cmd, "\n-----------------------------------------end");
-            if (err) {
-                callback(err);
-                return;
-            }
-            stream.on('close', function (code, signal) {
-
-                //logger.info(result);
-                if (result !== '') {
-                    callback(null, result);
+    try{
+        conn.on('ready', function () {
+            let result = '';
+            let errResult = '';
+            conn.exec(cmd, function (err, stream) {
+                logger.info("\nexec cmd:-----------------------------------\n", cmd, "\n-----------------------------------------end");
+                if (err) {
+                    callback(err);
                     return;
                 }
-
-
-                if (errResult != '') {
-                    //callback(null, null, errResult);
+                stream.on('close', function (code, signal) {
+    
+                    //logger.info(result);
+                    if (result !== '') {
+                        callback(null, result);
+                        return;
+                    }
+    
+    
+                    if (errResult != '') {
+                        //callback(null, null, errResult);
+                        return;
+                    }
+    
+                    conn.end();
+    
+                }).on('data', function (data) {
+    
+                    if (result == '') result = data.toString() + '\n';
+                    else result = result + '\n' + data.toString();
+                }).stderr.on('data', function (data) {
+                    result = result + "\n" + data;
+                    conn.end();
                     return;
-                }
-
-                conn.end();
-
-            }).on('data', function (data) {
-
-                if (result == '') result = data.toString() + '\n';
-                else result = result + '\n' + data.toString();
-            }).stderr.on('data', function (data) {
-                result = result + "\n" + data;
-                conn.end();
-                return;
+                });
             });
-        });
-    }).connect(loginInfo);
+        }).connect(loginInfo);
+    }catch(err){
+        callback(err);
+    }
+   
 }
 
 exports.remoteShell = function (loginInfo, cmd, callback) {

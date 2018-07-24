@@ -1,11 +1,29 @@
 const router = require('express').Router();
+var _ = require("underscore")
 var logger = require('../services/common').logger;
 var DataNode = require('../collections/dataNode.js')
 var pNode = require('../collections/PNode.js');
-
 var cephManage = require('../services/cephManage.js');
+var cephMgr = require('../services/cephMgr.js')
 
-
+//modules array
+const modulesList = ["balancer",
+    "dashboard",
+    "prometheus",
+    "restful",
+    "status",
+    "influx",
+    "localpool",
+    "selftest",
+    "zabbix"]
+router.all('*', function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
+    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
+    res.header("X-Powered-By", ' 3.2.1')
+    res.header("Content-Type", "application/json;charset=utf-8");
+    next();
+});
 router.get('/', function (req, res) {
 
     res.json({
@@ -243,7 +261,7 @@ router.post('/mgrNode', function (req, res) {
             })
         } else {
             res.json({
-                data: {},
+                data: { hostname: req.body.hostname },
                 code: 0,
                 message: "Save Successful"
             });
@@ -268,7 +286,7 @@ router.get('/mgrNode', function (req, res) {
         }
         let result = [];
 
-        cephManage.getMgrDump(docs[0].ip, (err, data) => {
+        cephMgr.getMgrDump(docs[0].ip, (err, data) => {
             if (err) {
                 res.json({
                     data: {},
@@ -324,7 +342,7 @@ router.get('/mgrNode', function (req, res) {
  */
 router.put('/mgrNode/:ip', function (req, res) {
     if (req.body.state === "stop") {
-        cephManage.stopMgr(req.params.ip, function (err) {
+        cephMgr.stopMgr(req.params.ip, function (err) {
             if (err) {
                 res.json({
                     data: {},
@@ -340,7 +358,7 @@ router.put('/mgrNode/:ip', function (req, res) {
             }
         });
     } else if (req.body.state === "sandby") {
-        cephManage.startpMgr(req.params.ip, function (err) {
+        cephMgr.startpMgr(req.params.ip, function (err) {
             if (err) {
                 res.json({
                     data: {},
@@ -356,7 +374,7 @@ router.put('/mgrNode/:ip', function (req, res) {
             }
         });
     } else if (req.body.state === "create") {
-        cephManage.createMgr(req.params.ip, function (err) {
+        cephMgr.createMgr(req.params.ip, function (err) {
             if (err) {
                 res.json({
                     data: {},
@@ -380,7 +398,84 @@ router.put('/mgrNode/:ip', function (req, res) {
     }
 });
 
-router.delete('/mgrNode')
+/**
+ *delete mgrNode 
+ */
+//router.delete('/mgrNode/:ip')
+/**
+ * get all ceph mgr modules
+ * @param ip
+ */
+router.get('/mgrNode/modules/:ip', function (req, res) {
+    //exam ip format
+    if (!ip_exam(req.params.ip)) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "Not Correct IP Format!"
+        })
+    }
+    cephMgr.getMgrModules(req.params.ip, function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 5,
+                message: err
+            })
+        } else {
+            res.json({
+                data: {},
+                code: 5,
+                message: data
+            })
+        }
+    })
+});
+
+/**
+ * change ceph mgr module state
+ * @param {path param} ip
+ * @param {body param} moduleName
+ * @param {body param} action
+ */
+router.put('/mgrNode/modules/:ip', function (req, res) {
+    let ip = req.params.ip;
+    let moduleName = req.body.moduleName;
+    let action = req.body.action;
+    //exam ip format
+    if (!ip_exam(req.params.ip)) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "Not Correct IP Format!"
+        })
+    }
+
+
+    if (!_.contains(modulesList, moduleName)) {
+        res.json({
+            data: {},
+            code: 5,
+            message: "Not Correct Module Name"
+        })
+    }
+
+    cephMgr.changeModuleState(ip, moduleName, action, function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            })
+        } else {
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            })
+        }
+    })
+});
 
 
 
@@ -391,5 +486,14 @@ function ip_exam(ip) {
     return pattern.test(ip);
 }
 
-
+function modules() {
+    return ["balancer",
+        "dashboard",
+        "prometheus",
+        "restful",
+        "status", "influx",
+        "localpool",
+        "selftest",
+        "zabbix"]
+}
 module.exports = router;

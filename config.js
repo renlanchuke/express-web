@@ -2,7 +2,7 @@ var config = {
     development: {
         database: 'mongodb://127.0.0.1/deepsphere',
         // express server
-        expressHttpPort: 3001
+        expressHttpPort: 4001
     },
     local: {
         database: 'mongodb://127.0.0.1/deepsphere',

@@ -140,8 +140,10 @@ var initApp = function (app, ssl) {
         logger.debug('running in production env');
         app.use(errorHandler());
     }
-    ;
 
+    const router = express.Router();
+
+    //设置跨域访问
 
     app.use('/', require('../routes/index.js'));
     app.use('/api/ceph', apiAuthentication, require('../routes/cephRouter.js'));

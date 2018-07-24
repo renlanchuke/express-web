@@ -91,25 +91,25 @@ var loginInfo = {
 
 // });
 
-// conn.on('ready', function() {
-//     console.log('Client :: ready');
-//     conn.exec('sudo fdisk -l', function(err, stream) {
-//       if (err) throw err;
-//       stream.on('close', function(code, signal) {
-//         console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-//         conn.end();
-//       }).on('data', function(data) {
-//         console.log('STDOUT: ' + data);
-//       }).stderr.on('data', function(data) {
-//         console.log('STDERR: ' + data);
-//       });
-//     });
-//   }).connect({
-//     host: '192.168.3.10',
-//     port: 22,
-//     username: 'gushenxing',
-//     password: 'gushenxing123'
-// });
+conn.on('ready', function() {
+    console.log('Client :: ready');
+    conn.exec('sudo fdisk -l', function(err, stream) {
+      if (err) throw err;
+      stream.on('close', function(code, signal) {
+        console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+        conn.end();
+      }).on('data', function(data) {
+        console.log('STDOUT: ' + data);
+      }).stderr.on('data', function(data) {
+        console.log('STDERR: ' + data);
+      });
+    });
+  }).connect({
+    host: '192.168.3.9',
+    port: 22,
+    username: 'gushenxing',
+    password: 'gushenxing123'
+});
 
 
 // remoteExec(loginInfo,"sudo fdisk -l",function(err,data,errData){
@@ -150,10 +150,10 @@ var loginInfo = {
 //     if (data) logger.info(data);
 // })
 
-cephManage.getMgrDump('192.168.3.12', function (err, data, errData) {
-    if (err) logger.info(err);
-    if (data) logger.info(data);
-    if (errData) logger.info(errData);
-})
+// cephManage.getMgrDump('192.168.3.12', function (err, data, errData) {
+//     if (err) logger.info(err);
+//     if (data) logger.info(data);
+//     if (errData) logger.info(errData);
+// })
 
 

@@ -8,8 +8,17 @@ var rack = require('../collections/rack.js')
 var pNode = require('../collections/PNode.js');
 
 var cephManage = require('../services/cephManage.js');
+var cephMgr = require('../services/cephMgr.js')
 
 
+router.all('*', function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
+    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
+    res.header("X-Powered-By", ' 3.2.1')
+    res.header("Content-Type", "application/json;charset=utf-8");
+    next();
+});
 
 router.get('/', function (req, res) {
     rack.find({}, (err, docs) => {
@@ -20,9 +29,9 @@ router.get('/', function (req, res) {
         });
 
         res.json({
-            data: {},
+            data: docs,
             code: 0,
-            message: docs
+            message: "ok"
         });
     }).populate({ path: 'pnode', select: 'hostname' });
 });
