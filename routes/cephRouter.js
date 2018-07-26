@@ -16,14 +16,15 @@ const modulesList = ["balancer",
     "localpool",
     "selftest",
     "zabbix"]
+
 router.all('*', function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "X-Requested-With");
-    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
-    res.header("X-Powered-By", ' 3.2.1')
-    res.header("Content-Type", "application/json;charset=utf-8");
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
+
     next();
 });
+
 router.get('/', function (req, res) {
 
     res.json({
@@ -86,6 +87,23 @@ router.get('/disks/:ip', function (req, res) {
 
 });
 
+router.get('/dataNode', function (req, res) {
+    cephManage.getDataNode(function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            })
+        } else {
+            res.json({
+                data: data,
+                code: 0,
+                message: "OK"
+            })
+        }
+    })
+});
 /**
  * GET PNode by hostname
  * @param hostname
@@ -424,9 +442,9 @@ router.get('/mgrNode/modules/:ip', function (req, res) {
             })
         } else {
             res.json({
-                data: {},
+                data: data,
                 code: 5,
-                message: data
+                message: "ok"
             })
         }
     })

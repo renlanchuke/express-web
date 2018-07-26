@@ -91,25 +91,25 @@ var loginInfo = {
 
 // });
 
-conn.on('ready', function() {
-    console.log('Client :: ready');
-    conn.exec('sudo fdisk -l', function(err, stream) {
-      if (err) throw err;
-      stream.on('close', function(code, signal) {
-        console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-        conn.end();
-      }).on('data', function(data) {
-        console.log('STDOUT: ' + data);
-      }).stderr.on('data', function(data) {
-        console.log('STDERR: ' + data);
-      });
-    });
-  }).connect({
-    host: '192.168.3.9',
-    port: 22,
-    username: 'gushenxing',
-    password: 'gushenxing123'
-});
+// conn.on('ready', function() {
+//     console.log('Client :: ready');
+//     conn.exec('sudo fdisk -l', function(err, stream) {
+//       if (err) throw err;
+//       stream.on('close', function(code, signal) {
+//         console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+//         conn.end();
+//       }).on('data', function(data) {
+//         console.log('STDOUT: ' + data);
+//       }).stderr.on('data', function(data) {
+//         console.log('STDERR: ' + data);
+//       });
+//     });
+//   }).connect({
+//     host: '192.168.3.9',
+//     port: 22,
+//     username: 'gushenxing',
+//     password: 'gushenxing123'
+// });
 
 
 // remoteExec(loginInfo,"sudo fdisk -l",function(err,data,errData){
@@ -123,6 +123,10 @@ conn.on('ready', function() {
 
 // request.getServerInfo('http://192.168.3.12:7000',function(err,data){
 
+// });
+
+// request.getHealthData('http://192.168.3.12:7000', function (err, data) {
+//     logger.info("ok");
 // });
 
 // cephManage.getOSDInfo('192.168.3.12', 'osd.2', function (err, data, errData) {
@@ -156,4 +160,8 @@ conn.on('ready', function() {
 //     if (errData) logger.info(errData);
 // })
 
+var username = "admin";
+var password = "admin";
+var auth = "Basic " + new Buffer(username + ":" + password).toString("base64");
 
+logger.info(auth);

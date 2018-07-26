@@ -1,25 +1,91 @@
 var common = require('./common.js');
+var pNode = require("../collections/PNode.js")
+
 
 var logger = common.logger;
+var mongoose = require('mongoose');
 
-var ip_address = '192.168.3.12:7000';
-exports.getOSDList = function (ip_address, callback) {
-    let url = ip_address + '/osd/list_data';
+var ip = '192.168.3.12:7000';
+exports.getOSDList = function (ip, callback) {
+    let url = ip + '/osd/list_data';
+    let res = []
 
     common.get(url, null, function (err, data) {
         if (err) {
             logger.error("Error accur while get osd data list");
+            callback(err);
             return;
         }
         var jsonData = JSON.parse(data);
-        logger.info("data: ", jsonData);
+
+        for (nodeTemp of jsonData) {
+            let dataNode = {
+                hostname: '',
+                ip: '',
+                osds: []
+
+            }
+            //logger.info(nodeTemp);
+
+            dataNode.hostname = nodeTemp[0];
+
+
+            for (osd of nodeTemp[1]) {
+                dataNode.osds.push({
+                    id: 'osd.' + osd.id,
+                    up: osd.up,
+                    in: osd.in,
+                    stats: osd.stats
+                });
+
+            }
+            //logger.info(dataNode);
+            res.push(dataNode);
+
+        }
+
+        callback(err, res);
+        // logger.info("data: ", res);
+    });
+}
+
+exports.getHealthData = function (ip, callback) {
+    let url = ip + '/health_data';
+    let res = new Object();
+
+    common.get(url, null, function (err, data) {
+        if (err) {
+            logger.error("Error accur while get osd data list");
+            callback(err);
+            return;
+        }
+        var jsonData = JSON.parse(data);
+
+        res.health = jsonData.health
+        res.pools = jsonData.df.pools;
+        res.stats = jsonData.df.stats;
+        res.mon_quorum = jsonData.mon_status.quorum;
+        res.mgr_status = {
+            active_name: jsonData.mgr_map.active_name,
+            standbys: jsonData.mgr_map.standbys.length
+        }
+        // res.mgr_status.active_name = jsonData.mgr_map.active_name;
+        // res.mgr_status.standbys = jsonData.mgr_map.standbys.length;
+        let temp = jsonData.fs_map.filesystems[0];
+        res.mds_status = temp.mdsmap.info;
+        res.osds = jsonData.osd_map.osds;
+        res.clog = jsonData.clog;
+        res.auditLog = jsonData.audit_log
+
+        callback(err, res);
+        logger.info("data: ", res);
     });
 }
 
 exports.getServerInfo = function (callback) {
     let api = getMgrIp() + '/servers_data';
 
-    var res = [];
+
     common.get(api, null, function (err, data) {
         if (err) {
             logger.error("Error accur while get osd data list");
@@ -52,6 +118,21 @@ exports.getServerInfo = function (callback) {
         callback(null, res);
     });
 }
+exports.getDashboard = function (query, start, end, step, callback) {
+    var username = "admin";
+    var password = "admin";
+    var auth = "Basic " + new Buffer(username + ":" + password).toString("base64");
+
+    let api = "/api/datasources/proxy/2/api/v1/query_range";
+    let qyery_string = getDashboardIp() + api + "?query=" + query + "&start=" + start + "&end=" + end + "&step=" + step;
+    common.authget(qyery_string, auth, function (err, data) {
+        if (err) {
+            callback(err);
+        } else {
+            callback(null, JSON.parse(data));
+        }
+    })
+}
 
 function createServerInfo() {
     let serverInfo = new Object();
@@ -68,3 +149,8 @@ function createServerInfo() {
 function getMgrIp() {
     return 'http://192.168.3.12:7000';
 }
+
+function getDashboardIp() {
+    return "http://192.168.3.143:3000";
+}
+

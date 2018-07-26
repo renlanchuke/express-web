@@ -277,6 +277,31 @@ exports.deleteOSD = function (ip, osd, callback) {
 
 
 }
+
+exports.getDataNode = function (callback) {
+    PNode.find({}, (err, docs) => {
+        if (err) {
+            callback(err);
+            return;
+        }
+        request.getOSDList(getMgrIp(), (err, dataNode) => {
+            if (err) {
+                callback(err);
+                return;
+            }
+
+            for (dn of dataNode) {
+                for (doc of docs) {
+                    if (dn.hostname === doc.hostname) {
+                        dn.ip = doc.ip
+                    }
+                }
+            }
+
+            callback(null, dataNode);
+        });
+    })
+}
 //get admin node ip address
 function getAdminIp() {
     return "192.168.3.9";
@@ -290,6 +315,11 @@ function getLoginInfo(ip) {
         username: 'gushenxing',
         password: 'gushenxing123'
     };
+}
+
+//get {ip} node ssh login info
+function getMgrIp() {
+    return 'http://192.168.3.12:7000';
 }
 
 exports.getOSDInfo = getOSDInfo;

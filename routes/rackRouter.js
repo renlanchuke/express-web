@@ -7,16 +7,13 @@ var logger = require('../services/common').logger;
 var rack = require('../collections/rack.js')
 var pNode = require('../collections/PNode.js');
 
-var cephManage = require('../services/cephManage.js');
-var cephMgr = require('../services/cephMgr.js')
 
 
 router.all('*', function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "X-Requested-With");
-    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
-    res.header("X-Powered-By", ' 3.2.1')
-    res.header("Content-Type", "application/json;charset=utf-8");
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
+
     next();
 });
 
@@ -121,6 +118,7 @@ router.put('/:name', function (req, res) {
 
     //get rack by name
     var promise1 = mongoose.model('Rack').findOne({ 'name': req.params.name }).exec();
+    
     //get PNode by hostname
     var promise2 = mongoose.model('PNode').findOne({ 'hostname': req.body.pNodeName }).exec();
 

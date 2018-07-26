@@ -24,7 +24,6 @@ exports.get = function (url, cookie, callback, retry) {
         'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
         'Connection': 'Keep-Alive',
         'Accept-Encoding': 'gzip,deflate'
-
     };
 
     request({
@@ -68,6 +67,59 @@ exports.get = function (url, cookie, callback, retry) {
         });
 }
 
+//使用Auth访问页面
+exports.authget = function (url, auth, callback, retry) {
+    if (!retry) retry = 0;
+    var headers = {
+        'Accept': 'text/html, application/xhtml+xml, */*',
+        'Accept-Language': 'zh-CN',
+        'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
+        "Authorization": auth,
+        'Connection': 'Keep-Alive',
+        'Accept-Encoding': 'gzip,deflate'
+    };
+
+    request({
+        url: url,
+        headers: headers,
+        timeout: 5000,
+        encoding: null
+    },
+        function (error, response, data) {
+            // console.log("error: "+error);
+            if (!error && response.statusCode == 200) {
+
+                var buffer = new Buffer(data);
+                var encoding = response.headers['content-encoding'];
+                if (encoding == 'gzip') {
+                    zlib.gunzip(buffer, function (err, decoded) {
+                        //console.log("err: "+ err);
+                        callback(err && ('unzip error' + err), decoded && decoded.toString());
+                    });
+                } else if (encoding == 'deflate') {
+                    zlib.inflate(buffer, function (err, decoded) {
+                        callback(err && ('deflate error' + err), decoded && decoded.toString());
+                    })
+                } else {
+
+                    callback(null, buffer.toString());
+                }
+            }
+            else {
+                //小于错误次数则重试
+                if (retry < maxretry) {
+                    self.logger.warn("retry getting url : " + url);
+                    setTimeout(function () {
+                        self.authget(url, auth, callback, retry + 1);
+                    }, 3000);
+
+                }
+                else
+                    callback(error || response.statusCode);
+            }
+        });
+}
+
 //用form訪問
 exports.post = function (url, form, callback, retry) {
     if (!retry) retry = 0;
@@ -87,7 +139,7 @@ exports.post = function (url, form, callback, retry) {
         url: url,
         header,
         form: form
-        // headers: headers,
+        // headers: headers,dashboardRouter
         // timeout: 15000,
         // encoding: null
     },
@@ -138,8 +190,8 @@ exports.getDateString = function (date) {
     var year = date.getFullYear().toString();
     var month = date.getMonth().toString();
     var day = date.getDate().toString();
-    var hour=date.getHours().toString();
-    var min=date.getMinutes().toString();
+    var hour = date.getHours().toString();
+    var min = date.getMinutes().toString();
 
     return year + '-' + month + '-' + day + ' ' + hour + ':' + min;
 }
@@ -189,34 +241,18 @@ exports.getDateArray = function (date1, date2) {
 
 
 exports.logger = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)({
-      timestamp: function() {
-        return self.getDateString();
-      },
-      formatter: function(options) {
-        // Return string will be passed to logger.
-        return options.timestamp() +' '+ options.level.toUpperCase() +' '+ (undefined !== options.message ? options.message : '') +
-          (options.meta && Object.keys(options.meta).length ? '\n\t'+ JSON.stringify(options.meta) : '' );
-      }
-    })
-  ]
+    transports: [
+        new (winston.transports.Console)({
+            timestamp: function () {
+                return self.getDateString();
+            },
+            formatter: function (options) {
+                // Return string will be passed to logger.
+                return options.timestamp() + ' ' + options.level.toUpperCase() + ' ' + (undefined !== options.message ? options.message : '') +
+                    (options.meta && Object.keys(options.meta).length ? '\n\t' + JSON.stringify(options.meta) : '');
+            }
+        })
+    ]
 });
 
-exports.remoteExec=function(loginInfo,cmd,callback){
-    conn.on('ready', function() {
-        conn.exec(cmd, function(err, stream) {
-          if (err) throw callback(err);
-          stream.on('close', function(code, signal) {
-            //console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-            conn.end();
-          }).on('data', function(data) {
-            callback(null,data)
-          }).stderr.on('data', function(data) {
-              callback(null,null,data);
-            stream.destroy();
-          });
-        });
-      }).connect(loginInfo);
-}
 

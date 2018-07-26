@@ -148,6 +148,7 @@ var initApp = function (app, ssl) {
     app.use('/', require('../routes/index.js'));
     app.use('/api/ceph', apiAuthentication, require('../routes/cephRouter.js'));
     app.use('/api/rack', apiAuthentication, require('../routes/rackRouter.js'))
+    app.use('/api/', apiAuthentication, require('../routes/dashboardRouter.js'))
 
 }
 
