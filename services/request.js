@@ -134,6 +134,54 @@ exports.getDashboard = function (query, start, end, step, callback) {
     })
 }
 
+
+exports.getFSInfo = function (callback) {
+    let api = getMgrIp() + "/toplevel_data";
+
+    common.get(api, null, function (err, data) {
+        if (err) {
+            callback(err);
+            return;
+        }
+        let jsonData = JSON.parse(data);
+        let urls = jsonData.filesystems;
+        // logger.info(urls);
+        let results = [];
+
+        getFSData(results, urls, 0, function (err, data) {
+            if (err) {
+                callback(err);
+                return;
+            } else {
+                callback(null, data);
+            }
+        });
+
+    })
+
+
+    function getFSData(results, urls, index, callback) {
+        if (index < urls.length) {
+            let url = getMgrIp() + urls[index].url;
+            url=url.replace("filesystem","filesystem_data");
+            logger.info(url)
+            common.get(url, null, function (err, data) {
+                if (err) {
+                    callback(err);
+                    return;
+                }
+                results.push(JSON.parse(data));
+
+                getFSData(results, urls, index + 1, callback);
+
+            });
+        } else {
+            callback(null, results);
+        }
+    }
+
+
+}
 function createServerInfo() {
     let serverInfo = new Object();
     serverInfo.hostname = '';

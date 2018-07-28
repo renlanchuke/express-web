@@ -5,6 +5,10 @@ var DataNode = require('../collections/dataNode.js')
 var pNode = require('../collections/PNode.js');
 var cephManage = require('../services/cephManage.js');
 var cephMgr = require('../services/cephMgr.js')
+var fsManage = require('../services/fsManage.js');
+var requestClient = require('../services/request');
+var config = require("../services/config");
+var poolManage = require("../services/poolManage.js")
 
 //modules array
 const modulesList = ["balancer",
@@ -494,6 +498,214 @@ router.put('/mgrNode/modules/:ip', function (req, res) {
         }
     })
 });
+
+router.get("/fs", function (req, res) {
+    requestClient.getFSInfo(function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            })
+
+            return;
+        } else {
+            res.json({
+                data: data,
+                code: 0,
+                message: "ok"
+            })
+        }
+    })
+});
+
+/***
+ * mount file system to a client
+ * @param ip
+ * @param fsName
+ * 
+ */
+router.post("/fs/:ip", function (req, res) {
+    client_ip = req.params.ip;
+    path = "/mnt/dpfs";
+    fsName = req.body.fsName;
+    MDS_ip = config.getMDSIp();
+    fsManage.mountFS(client_ip, path, fsName, MDS_ip, function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            });
+
+            return;
+        }
+
+        res.json({
+            data: {},
+            code: 4,
+            message: data
+        })
+    });
+});
+
+/***
+ * create pool 
+ * @param ip
+ * @param fsName
+ * 
+ */
+router.post("/pool", function (req, res) {
+    let ip = req.body.ip;
+    let name = rq.body.name;
+    let pg_num = req.body.pg_num;
+    poolManage.createPool(ip, name, pg_num, function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            });
+
+            return;
+        }
+
+        res.json({
+            data: {},
+            code: 4,
+            message: data
+        })
+    });
+});
+
+
+router.delete("/pool", function (req, res) {
+    let ip = req.body.ip;
+    let name = rq.body.name;
+
+    poolManage.deletePool(ip, name, function (err, data) {
+        if (err) {
+            res.json({
+                data: {},
+                code: 4,
+                message: err
+            });
+
+            return;
+        }
+
+        res.json({
+            data: {},
+            code: 4,
+            message: data
+        })
+    });
+});
+
+router.post('/pool/:poolname', function (req, res) {
+    let ip = config.getMDSIp();
+    let poolName = req.params.poolName;
+
+
+    if (req.body.size) {
+        poolManage.setPoolDuplicated(ip, poolName, req.body.size, function (err, data) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            });
+
+        });
+    } else if (req.body.pg_num) {
+        poolManage.setPoolPg_num(ip, poolName, req.body.pg_num, function (err, data) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            });
+
+        });
+    } else if (req.body.pgp_num) {
+        poolManage.setPoolDuplicated(ip, poolName, req.body.pgp_num, function (err, data) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            });
+
+        });
+    } else if (req.body.pgp_num) {
+        poolManage.setPoolDuplicated(ip, poolName, req.body.pgp_num, function (err, data) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            });
+
+        });
+    } else if (req.body.max_objects) {
+        poolManage.setPoolMax_objects(ip, poolName, req.body.max_objects, function (err, data) {
+            if (err) {
+                res.json({
+                    data: {},
+                    code: 4,
+                    message: err
+                });
+                return;
+            }
+
+            res.json({
+                data: {},
+                code: 0,
+                message: data
+            });
+
+        });
+    } else {
+        res.json({
+            data: {},
+            code: 5,
+            message: "No correct params"
+        })
+    }
+});
+
 
 
 
